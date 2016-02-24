@@ -1,0 +1,43 @@
+<apex:page standardController="Cohort__c" extensions="CohortClassSchedulerController">
+
+	<apex:form >
+
+		<apex:pageMessages id="pagemsg"/>
+  
+		<apex:pageBlock title="Class Scheduler">
+			<apex:pageBlockButtons location="top">
+			    <apex:actionStatus id="SaveButtonStatus">
+			     	<apex:facet name="stop">
+			      		<apex:outputPanel >
+			        		<apex:commandButton action="{!getCourseSections}" value="Schedule" status="SaveButtonStatus" rerender="pagemsg" />
+			       			<apex:commandButton action="{!cancel}" value="Back" immediate="true" />
+			       		</apex:outputPanel>
+			      	</apex:facet>
+			    	<apex:facet name="start">
+			   			<apex:outputPanel >
+			        		<apex:commandButton value="Scheduling..." disabled="true" />
+			        		<apex:commandButton value="Scheduling..." disabled="true" />
+			       		</apex:outputPanel>
+			      	</apex:facet>
+			    </apex:actionStatus>
+   			</apex:pageBlockButtons>
+
+			<apex:pageBlockSection showHeader="false" columns="2" id="block1">
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Semester" for="semester" />
+					<apex:selectList size="1" value="{!selectedSemester}">
+						<apex:selectOptions value="{!semesterList}" id="semester" />
+					</apex:selectList>
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Year" for="year" />
+					<apex:inputText value="{!selectedYear}" id="year" />
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+		</apex:pageBlock>
+	</apex:form>	
+
+</apex:page>

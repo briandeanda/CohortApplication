@@ -1,0 +1,34 @@
+<apex:page controller="CohortCourseSectionUploadController" action="{!onload}">
+
+	<apex:form enctype="multipart/form-data">
+		<apex:pageMessages />
+
+		<apex:pageBlock title="Upload a Class Section Times" rendered="{!configurationError == FALSE}">
+			<apex:pageBlockButtons >
+				<apex:commandButton action="{!standardUpload}" value="Upload File" />
+				<apex:commandButton action="{!overwriteUpload}" rendered="{!fileFound}" value="Upload and Overwrite File" />
+				<apex:commandButton action="{!gotoCourseCreation}" value="Go To Course Creation Page" rendered="{!fileExists}" />
+			</apex:pageBlockButtons>
+
+			<apex:pageBlockSection showHeader="false" columns="2" id="block1">
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="File Name" for="fileName" />
+					<apex:inputText value="{!fileName}" id="fileName" />
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="File" for="file" />
+					<apex:inputFile value="{!doc.body}" filename="{!doc.name}" id="file" accept="csv" />
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Folder Name" for="folderName" />
+					<apex:outputText value="{!folderName}" id="folderName" />
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+		</apex:pageBlock>
+	</apex:form>
+
+</apex:page>

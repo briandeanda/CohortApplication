@@ -1,0 +1,17 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="false" controller="CohortCourseSectionCreationController" applyHtmlTag="false" docType="html-5.0">
+	<html>
+		<title>Create Course Sections</title>
+		<head>
+			<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+			<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-sanitize.min.js"></script>
+			<script type="text/javascript" src="{!URLFOR($Resource.angularcohort,'angular-cohort/js/CourseCreation.js')}"></script>
+			<link href="{!URLFOR($Resource.angularcohort,'angular-cohort/css/CourseCreation.css')}" rel="stylesheet"></link>
+			<link href="{!URLFOR($Resource.bootstrap_3_3_6, 'bootstrap-3.3.6-dist/css/bootstrap.min.css')}" rel="stylesheet"></link>
+			<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+			<script src="{!URLFOR($Resource.bootstrap_3_3_6, 'bootstrap-3.3.6-dist/js/bootstrap.min.js')}"></script>
+		</head>
+		<body ng-app="CourseCreation" ng-controller="CourseCreation">
+			<ng-include src="'{!URLFOR($Resource.angularcohort,'angular-cohort/html/CourseCreation.html')}'"></ng-include>
+		</body>
+	</html>
+</apex:page>

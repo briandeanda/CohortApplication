@@ -1,0 +1,1693 @@
+<apex:page Controller="schedule" sidebar="false" showHeader="false" showChat="false" title="CSU Monterey Bay | ILP">
+    <style>
+        select { height:21px; }
+        #ppt, #emails {color:#DDD;}
+        #ppt > a {color:#DDD;}
+        #displayName{color:#DDD;}
+        #nameandstatus{color:#DDD;padding-left:20px;}
+        #messages{float:left;height:75px;width:280px;background:#fff;border:1px solid black;overflow: auto;}
+        #message{float:left; height:50px;width:280px;}
+        #sendMessage{float:right;}
+        #note {height:100px; width:290px;}
+        #setNotes{float:right;}
+        #chatBox {float:left;padding:15px; height:190px; width:300px;background: #CD8;}
+      #noteBox * {display:none;}
+        #noteBox {float:left;padding:15px; height:190px; width:300px;background: #CD8;}
+        #notifcations{overflow:auto;min-height:100px; width:500px;height:250px;float:right; background: #9ee8fa;padding: 15px;
+border: 3px solid #9ee8fa;border-radius: 0px 8px 8px 0px;}
+        #agreementDiv{background:#fff; width:100%; height:100%;}
+        #majorDiv{display:none;float:left;background: #CD8; padding:15px;}
+        #infoDiv{display:none;float:left;background: #CD8; padding:15px;}
+        #questions{float:left;text-align:center; background: #CD8; padding:15px; height:190px; width:390px;}
+#main{float:left;width: 1080px; min-height: 300px;padding-top:20px;}  
+#semesterT{display: none; position:absolute; left: 1081px; top: 520px; width:174px; height: 500px; padding: 15px; border: 3px solid #9ee8fa; background: #9ee8fa; border-radius: 8px 8px 8px 8px;}
+html, body{width: 1080px;background: #123;
+ float:left;}
+
+#available{overflow:auto;width:500px;height:250px;float:left;background: #CD8;
+padding: 15px;
+border: 3px solid #BC8;
+border-radius: 8px 0px 0px 8px;}
+        #topBar{margin-bottom:20px;padding: 20px;background:#9ee8fa;height:80px;}
+
+#saveDiv{ height:100%; width:700px; float:left; }
+#top{ width:500px; float:right; }
+#warning{ display:none; color: #D8000C; border: 1px solid #D8000C; background-color: #FFBABA; }
+#fulfilledOutcomes{ font-weight:italic; font-size:10pt; }
+#selected {display:none; font-size:14pt; color: #00529B; border: 1px solid #00529B; background-color: #BDE5F8; }
+li{ list-style:none; margin:0; padding:0; }
+ul{ padding-left: 0; }
+.semesterLabel{font-size:14pt;font-weight:bold;border-bottom:1px solid black;}
+.semesterPicked{ height:250px; }
+.unitLabel{font-size:10pt;font-weight:italic;}
+.classes {font-weight:bold;float:left;border-radius:25px;box-shadow:1px 1px 1px #888;border:1px solid black; margin:5px; padding:5px; cursor: pointer;}
+.classes:hover  { background: rgba(20,20,20,0.17); }
+.classes:active { background: rgba(20,20,20,0.30); }
+        
+        .classesC {font-weight:bold;background:rgba(204, 221, 136, 1);float:left;border-radius:25px;box-shadow:1px 1px 1px #888;border:1px solid black; margin:5px; padding:5px; cursor: pointer;}
+.classesC:hover  { background: rgba(255, 255, 255, .5); }
+.classesC:active { background: rgba(204, 221, 136, 1); }
+        
+        .classesGE {font-weight:bold;background:rgba(158, 232, 250, 1);float:left;border-radius:25px;box-shadow:1px 1px 1px #888;border:1px solid black; margin:5px; padding:5px; cursor: pointer;}
+.classesGE:hover  { background: rgba(255, 255, 255, .5); }
+.classesGe:active { background: rgba(158, 232, 250, 1); }
+        
+        .classesE {font-weight:bold;background:rgba(255, 255, 255, 1);float:left;border-radius:25px;box-shadow:1px 1px 1px #888;border:1px solid black; margin:5px; padding:5px; cursor: pointer;}
+.classesE:hover  { background: rgba(255, 255, 255, .5);}
+.classesE:active { background: rgba(255, 255, 255, 1); }
+.listed { max-width: 120px; border-radius:25px; border:1px solid black; margin:5px; padding:5px; }
+.odd {float:left;background: #CD8;
+ padding:15px; min-height:300px; min-width:150px;}
+.even {float:left; background: #9ee8fa;
+  padding:15px;  min-height:300px; min-width:150px;}
+#loadingDiv {
+  display: none;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 1080px;
+  height: 100%;
+  background-color: rgba(39, 39, 39, 0.55);
+}
+.absoluteCenter {
+  margin: auto;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  width:  64px; 
+  height: 64px;
+}
+
+</style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+<script>
+    var coursesLoaded = {!courseslistAvailable};
+    var coursesOutcomes;
+    var yearNow = parseInt(new Date().getFullYear()) - 6;
+    var coursePreqs = {!coursesPreqs};
+    var courseCoreqs = {!coursesCoreqs};
+    var concentrationArray = {!concentrationsArray};
+    var pathways = {!pathwaysArray};
+    var questions = {!questionsArray};
+    var questionCount = 0;
+    var selectedClass = "null";
+    var firstClick = false;
+    var courses = new Array();
+    var studentId = "studentId";
+    var studentInfo;
+    var adminInfo;
+    var googleId;
+    var googleEmail;
+    var sender;
+    var majorElectives;
+    var userIsAdmin = false;
+    
+    
+    //Browser Check
+    
+    // Opera 8.0+ (UA detection to detect Blink/v8-powered Opera)
+    var isOpera = !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+	
+    // Firefox 1.0+
+    var isFirefox = typeof InstallTrigger !== 'undefined';
+	
+    // At least Safari 3+: "[object HTMLElementConstructor]"
+    var isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
+    
+    // Chrome 1+
+	var isChrome = !!window.chrome && !isOpera;              
+    
+    // At least IE6
+	var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+    var browserCheck = "";
+    
+    if (isChrome) {
+        browserCheck = "Google Chrome";
+    }
+    else if (isFirefox) {
+        browserCheck = "Firefox";
+    }
+    else if (isOpera) {
+        browserCheck = "Opera";
+    }
+    else if (isSafari) {
+        browserCheck = "Safari";
+    }
+    else if (isIE) {
+        browserCheck = "Internet Explorer";
+    }
+    
+	if (!isChrome && !isFirefox) {
+        alert("Please make sure you are using either Google Chrome or Firefox, or you may encounter issues with the ILP.\n\nYour current browser is: " + browserCheck + "\n\nThank you!");
+    }
+    
+    var loadingGif = "<img src='https://media.giphy.com/media/JBeu9q9LC1Kve/giphy.gif' />";
+    function getClass(name) {
+        for(var index = 0; index < coursesLoaded.length; ++index) {
+            if(coursesLoaded[index].Name == name) { return coursesLoaded[index]; }
+        }
+        return null;
+    }
+    
+    function getClassType(selected) {
+         for (var index = 0; index < coursesLoaded.length; index++) {
+             if (coursesLoaded[index].Name == selected) {
+            	return coursesLoaded[index].Class_Type__c;
+            }
+        }
+    }
+    
+    function classesAvailable(event) {
+        selectedClass = $(event).attr("id");  
+        $("#selected").fadeIn();
+        var classURL = getCourseURL(selectedClass);
+        if (getCourseOutcomes(selectedClass)) { 
+            $("#selected").html("Currently placing: " + selectedClass + "&nbsp &nbsp <i><br />Units: " + getCourseUnits(selectedClass)+"</i><br/>Fulfilled Course(s): " + getCourseOutcomes(selectedClass) + "</i><br/>Course Type: " + getClassType(selectedClass) + "<br/><a href=" + classURL + " target=_blank>Course Page</a>");
+        } else {
+            $("#selected").html("Currently placing: " + selectedClass + "<br/><i><br />Units: " + getCourseUnits(selectedClass)+"</i><br/>Course Type: " + getClassType(selectedClass) + "<br/><a href=" + classURL + " target=_blank>Course Page</a>");
+        }
+        firstClick = true;
+    }
+    function semesterClassClicked(item) {
+        $(".unitLabel").css('color','black');
+        var classpicked = "#"+$(item).attr("id").substr(0, $(item).attr("id").length - 6);
+        selectedClass = $(item).attr("id").substr(0, $(item).attr("id").length - 6);
+        firstClick=true;
+        $(classpicked).show();
+        $("#"+ $(item).attr("id")).remove();
+        $("#selected").fadeIn();
+        if (getCourseOutcomes(selectedClass)) { 
+            $("#selected").html("Currently placing: " + selectedClass + "&nbsp &nbsp <i>"+ getCourseUnits(selectedClass)+" units</i><br/>Fulfilled Course(s): " + getCourseOutcomes(selectedClass) + "</i><br/>" + URL__c);
+        } else {
+            $("#selected").html("Currently placing: " + selectedClass + "<br/><i>"+ getCourseUnits(selectedClass)+" units</i><br/>" + URL__c);
+        }
+        calcSemesterUnits();
+        $(".classes").css("color","black");
+        verifyClasses();
+    }
+    function selectClass(element, selectedClass) {
+        $(element).append("<li class=\"listed\" id=\""+selectedClass+"picked\" onclick='semesterClassClicked(this);event.stopPropagation();'>"+selectedClass+ "&nbsp &nbsp &nbsp <i>" + getCourseUnits(selectedClass) +" units</i></li>");
+        var classpicked = "#"+selectedClass.toString();
+        $(classpicked).hide();
+        verifyClasses();
+    }
+    var semesterChosen;
+    function semesterClicked(event) {
+        semesterChosen = $(event).parent().attr("id").substr(8);
+        console.log(semesterChosen);
+        calcSemesterUnits(); 
+        if (firstClick) {
+            $("#warning").html("");
+            $("#warning").hide();
+            $(".classes").css("color","black");
+            $(".classes").css("border-color","black");
+            $(".unitLabel").css('color','black');
+            selectClass($(event),selectedClass);
+            firstClick = false;
+            var preqFound = false;
+            var coreqFound = false;
+            $("#selected").fadeOut(500);
+            calculatePreAndCoReqs();
+            calcSemesterUnits(); 
+        }    
+    }
+    
+    function calculatePreAndCoReqs() {
+        var startYear = $("#year").val(); 
+        //$("#warning").html("");
+        
+        for (var count = 0; count < courseCoreqs.length; count++) {
+            coreqFound = false;
+            //console.log(courseCoreqs[count].Name);
+            if (courseCoreqs[count].Course__c == selectedClass) {
+                $("div#semester"+semesterChosen+" > ul > li").map(function(){
+                    var linkedCourse = this.id.substr(0, this.id.length - 6);
+                    
+                    if(linkedCourse == courseCoreqs[count].Name) {
+                        coreqFound = true;
+                    }
+                });
+                if (coreqFound == false) {
+                    $("#warning").append("Warning: The co-requisite for "+ courseCoreqs[count].Course__c + ", " + courseCoreqs[count].Name + " is missing.<br/>");
+                    $("#"+ courseCoreqs[count].Name).css("color","#D8000C");
+                    $("#"+ courseCoreqs[count].Name).css("border-color","#D8000C");
+                    $("#warning").show();
+                }
+            }
+        }
+        
+        var preReqsNot = [];
+        function hasPreReq(arr, a) {
+            for(var z = 0; z < arr.length; ++z) {
+                if(arr[z].Prev_Name__r.Name == a.Prev_Name__r.Name && arr[z].Next_Name__r.Name == a.Next_Name__r.Name) {
+                    return true;
+                }
+            }
+            return false;
+        } 
+        var classes = $(".semesterPicked > li");
+        var semesterIndex = 0;
+        var index = 0;
+        for(i = 0; i < classes.length; ++i) {
+            if($(classes.get(i)).parent().parent()[0].id.substr(8) != semesterIndex) {
+                semesterIndex = semesterNumber($(classes.get(i)).parent().parent()[0].id.substr(8));
+                index = i;
+                console.log(semesterIndex + ";" + index);
+            }
+            var _class = classes.get(i).id.substr(0, classes.get(i).id.length - 6);
+            for(j = 0; j < coursePreqs.length; ++j) {
+                if(coursePreqs[j].Next_Class__r.Name == _class) {
+                    var preReqFound = false;
+                    for(k = 0; semesterNumber($(classes.get(k)).parent().parent()[0].id.substr(8)) <= semesterIndex; ++k) {
+                        if(coursePreqs[j].Prev_Class__r.Name == classes.get(k).id.substr(0, classes.get(k).id.length - 6)) {
+                            preReqFound = true;
+                            break;
+                        }
+                        if(k+1 >= classes.length) { break; }
+                    }
+                    if(!preReqFound) {
+                        //console.log(coursePreqs[j]);
+                        preReqsNot.push(coursePreqs[j]);
+                    }
+                }
+            }
+        }
+        
+        for(i = 0; i < preReqsNot.length; i++) {
+            //console.log(preReqsNot[i]);
+            $("#warning").append("Warning: The prequisite for "+ preReqsNot[i].Next_Class__r.Name + ", " + preReqsNot[i].Prev_Class__r.Name + " is missing.<br/>");
+            $("#"+ preReqsNot[i].Prev_Class__r.Name).css("color","#D8000C");
+            $("#"+ preReqsNot[i].Prev_Class__r.Name).css("border-color","#D8000C");
+            $("#warning").show(); 
+        }
+    }
+    
+    $(document).ready(function(){
+        var baseEle = $("#bottom");
+        baseEle.hide();
+        $("#majorDiv").hide();
+        $("#infoDiv").hide();
+        $("#agreementDiv").hide();
+        $("#topBar").hide();
+        $("#bottomPanel").hide();
+        $("#sendMessage").click(function () {
+            $("#messages").append('<b>'+sender[0]+':</b> ' + $("#message").val() +'<br/>');
+            //console.log($("#messages").html());
+            //console.log(studentInfo);
+            schedule.saveChatBox(studentInfo.GoogleID__c, $("#messages").html() || "",
+                function(result, event) {
+                    if(!result) {
+                        alert("Weird... Chat didn't save... Try Again?");
+                    }
+                }
+            );
+            
+            $("#message").val('');
+        });     
+        $("#setNotes").click(function () {
+            //console.log($("#note").val());
+            //console.log(studentInfo);
+            schedule.saveComments(studentInfo.GoogleID__c, $("#note").val() || "",
+                function(result, event) {
+                    if(!result) {
+                        alert("Weird... Comments didn't save... Try Again?");
+                    }
+                }
+            );
+        }); 
+        //$("#questionText").text(questions[questionCount].QuestionText__c);
+        for (var index = 2008; index <= (yearNow + 6); index++) {
+            $("#startYear").append("<option value='"+index+"'>"+index+"</option>");
+            $("#startYearInfo").append("<option value='"+index+"'>"+index+"</option>");
+        }
+       
+        for (var index = 0; index < coursesLoaded.length; index++) {
+            courses[index]=coursesLoaded[index].Name;
+        }
+        
+        for (var index = 0; index < concentrationArray.length; index++) {
+            $("#changeConcentration").append("<option value='" + concentrationArray[index].Name + "'>" + concentrationArray[index].RealName__c + "</option>");
+        }
+    }); 
+    
+    function getClassesWithOutcome(outcome) {
+        //console.log("WHAT CLASS?! " + outcome);
+        var coursesWith = [];
+        for(i = 0; i < coursesLoaded.length; ++i) {
+            var o = coursesLoaded[i].Outcomes__c || "";
+            if(o.indexOf(";") != -1) {
+                o = o.split(";");
+                for(j = 0; j < o.length; ++j) {
+                    if(!inOutcomes(o[j])) { }
+                    else if(o[j] == outcome) {
+                        if(o[j] == "CSIT Elective" && majorElectives.indexOf(coursesLoaded[i].Name) != -1) {
+                            coursesWith.push(coursesLoaded[i]);
+                            continue;
+                        } else {
+                            coursesWith.push(coursesLoaded[i]);
+                            continue;
+                        }
+                    }
+                }
+            } else {
+                if(!inOutcomes(o)) { }
+                else if(o == outcome) {
+                    if(o == "CSIT Elective" && majorElectives.indexOf(coursesLoaded[i].Name) != -1) {
+                        coursesWith.push(coursesLoaded[i]);
+                        continue;
+                    } else {
+                        coursesWith.push(coursesLoaded[i]);
+                        continue;
+                    }
+                }
+            }
+        }
+        //console.log(coursesWith);
+        return coursesWith;
+    }
+    function verifyClasses() {
+        $("#warning").html("");
+        var classes = $(".semesterPicked > li");
+        var semesterIndex = 0;
+        var index = 0;
+        for(i = 0; i < classes.length; ++i) {
+            if($(classes.get(i)).parent().parent()[0].id.substr(8) != semesterIndex) {
+                semesterIndex = $(classes.get(i)).parent().parent()[0].id.substr(8);
+                index = i;
+            }
+            var _class = classes.get(i).id.substr(0, classes.get(i).id.length - 6);
+            for(j = 0; j < coursesLoaded.length; ++j) {
+                if(coursesLoaded[j].Name == _class) {
+                    //console.log(_class);
+                    var fall = $("#startSemester").val();
+                    var allowed = coursesLoaded[j].Semester_Offered__c;
+                    var valid = allowed == "Both" || semesterIndex == "T" || (semesterIndex % 2) == (allowed == "Fall" ? fall : (fall==1?0:1));
+                    if(!valid) {
+                        $("#warning").show();
+                        $("#warning").append("Warning: " + _class + " may not be offered during that semester <br />");
+                        $("#"+ _class + "picked").css("color","#D8000C");
+                        $("#"+ _class + "picked").css("border-color","#D8000C");
+                    }
+                }
+            }
+        }
+        getFulfilledOutcomes();
+    }
+    function inOutcomes(o) {
+        for(var _o in coursesOutcomes) {
+            if(coursesOutcomes[_o].Name == o) { return true; }
+        }
+        return false;
+    }
+    function getFulfilledOutcomes() {
+        var fulfilled = [];
+        var electiveCount = 0;
+        $("#fulfilledOutcomes").html("<h1>Fulfilled Course(s):</h1><br/>");
+        for (i = 0; i < coursesLoaded.length; i++) {
+            var course = coursesLoaded[i];
+            var idArray = $(".semesterPicked > li").map(function(){
+                var linkedCourse = this.id.substr(0, this.id.length - 6);
+                if(course.Name == linkedCourse) {
+                    if(course.Outcomes__c) {
+                        var outcomes = course.Outcomes__c.split(";");
+                        //console.log(outcomes);
+                        for(o = 0; o < outcomes.length; o++) {
+                            //console.log(outcomes[o] + ": " + inOutcomes(outcomes[o]));
+                            if(outcomes[o] == "CSIT Elective" && electiveCount < 3 && majorElectives.indexOf(course.Name) != -1) {
+                                fulfilled.push(outcomes[o]);
+                                $("#fulfilledOutcomes").append(outcomes[o] + ", ");
+                            } if(!inOutcomes(outcomes[o])) { }
+                            else if(fulfilled.indexOf(outcomes[o]) == -1) {
+                                fulfilled.push(outcomes[o]);
+                                $("#fulfilledOutcomes").append(outcomes[o] + ", ");
+                            }
+                        }
+                    }
+                }
+            }).get();    
+        }
+        //console.log(fulfilled);
+        //console.log(copyOutcomes);
+        $("#notFulfilledOutcomes").html("<h1>Missing Course(s):</h1><br/>");
+        for (z = 0; z < coursesOutcomes.length; z++) {
+            var co = coursesOutcomes[z];
+            //console.log(z + " < " + coursesOutcomes.length);
+            var b = false;
+            for (j = 0; j < fulfilled.length; j++) {
+                if(co.Name == fulfilled[j]) {
+                    b = true;
+                    removeAt(fulfilled,j);
+                    break;
+                }
+            }
+            if (!b) { 
+                var cs = getClassesWithOutcome(co.Name);
+                var c = cs[0] ? cs[0].Name : "";
+                console.log(co.Name);
+                $("#notFulfilledOutcomes").append(co.Name + " - Recommended Course: " + c + " <br />");
+            }
+        }
+        //console.log(coursesOutcomes.length);
+        calculatePreAndCoReqs();
+        return;
+    } 
+    
+    function getCourseURL(thisCourse) {
+        for (var index = 0; index < coursesLoaded.length; index++) {
+            if (coursesLoaded[index].Name == thisCourse) {
+                return coursesLoaded[index].URL__c;
+            }
+        }
+    }
+    
+    function getCourseUnits(thisCourse) {
+        for (var index = 0; index < coursesLoaded.length; index++) {
+            if (coursesLoaded[index].Name == thisCourse) {
+                console.log(coursesLoaded[index].Name + " - " + coursesLoaded[index].Units__c);
+                return coursesLoaded[index].Units__c;
+            }  
+        }
+        return 0;        
+    }
+    function getCourseOutcomes(thisCourse) {
+        for (var index = 0; index < coursesLoaded.length; index++) {
+            if (coursesLoaded[index].Name == thisCourse) {
+                //console.log(coursesLoaded[index]);
+                return coursesLoaded[index].Outcomes__c;
+            }  
+        }
+        //console.log(thisCourse + " had no outcomes");
+        return 0;        
+    }
+</script>
+    <button id="authorize-button" style="visibility:hidden;width:150px;height:30px;">Click to Authorize</button>
+    <br/><span id="displayName"></span> <br/>
+ 
+    <script type="text/javascript">
+      var clientId = '151933604304-dprsia5eec9ib80no066hvj9c7lq2718.apps.googleusercontent.com';
+      var apiKey = 'AIzaSyCVPUCF-1saboquHk-r000fXteD-Yfb3zk';
+      var scopes = ['https://www.googleapis.com/auth/plus.me','https://www.googleapis.com/auth/userinfo.email'];
+      function handleClientLoad() {
+        gapi.client.setApiKey(apiKey);
+        window.setTimeout(checkAuth,1);
+      }
+
+      function checkAuth() {
+        gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: true}, handleAuthResult);
+      }
+
+
+      function handleAuthResult(authResult) {
+        var authorizeButton = document.getElementById('authorize-button');
+        if (authResult && !authResult.error) {
+          authorizeButton.style.visibility = 'hidden';
+          makeApiCall();
+        } else {
+          authorizeButton.style.visibility = '';
+          authorizeButton.onclick = handleAuthClick;
+        }
+      }
+
+      function handleAuthClick(event) {
+        gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: false}, handleAuthResult);
+        return false;
+      }
+
+      function makeApiCall() {
+        gapi.client.load('plus', 'v1', function() {
+              var request = gapi.client.plus.people.get({
+                'userId': 'me'
+              });
+              request.execute(function(resp) {
+                  console.log(resp);
+                  //if(resp.domain == "csumb.edu") {
+                      googleId = resp.emails[0].value;
+                      
+                  $("#displayName").html("<b>Logged in as: </b>" + googleId);
+                      
+                      checkAndLoadAdmin();
+                  //} else {
+                  //    alert("Please login with a CSUMB email");
+                  //}
+          });
+        });
+      }
+    
+    //Fill in data for the user on the fields
+    function changeData() {       
+        document.getElementById("nameTextfield").value=studentInfo.Name__c;
+        document.getElementById("lastNameTextfield").value=studentInfo.Last_Name__c;
+        document.getElementById("cohortSelectInfo").value=studentInfo.Cohort__c;
+        document.getElementById("studentIdTextfield").value=studentInfo.Student_ID_n__c; 
+        document.getElementById("concentrationDropdown").value=studentInfo.Concentration__c; 
+        document.getElementById("highschoolTextfield").value=studentInfo.Highschool__c;
+        document.getElementById("priorCollegeTextfield").value=studentInfo.PriorCollege__c;
+        document.getElementById("startYearInfo").value=studentInfo.Start_Year__c;
+        document.getElementById("startSemesterInfo").value=studentInfo.Starting_Semester__c;
+        document.getElementById("yearInfo").value=studentInfo.Incoming_Status__c;
+    }
+    
+    //Sending users email with updates
+    
+    function sendMail(messageType) {
+        function handleCloseOpportunity(result, event) {
+            if(event.type == 'exception') {
+                alert(event.message);
+            } else {
+                var  msg = result;
+            }
+        }
+        schedule.sendEmail(studentInfo.GoogleID__c, studentInfo.Name__c + " " + studentInfo.Last_Name__c, messageType, handleCloseOpportunity);
+    }
+    
+    function modifyInfoDiv() {
+    	if ($("#majorSelectInfo").val() == "Communication Design") {
+       		document.getElementById("concentrationDropdown").innerHTML = "<option value=\"cd\">none (Communication Design)</option>";
+        }
+        
+        if ($("#majorSelectInfo").val() == "Computer Science") {
+            document.getElementById("concentrationDropdown").innerHTML = "<option value=\"se\">Software Engineering</option><option value=\"ns\">Network and Security</option><option value=\"gd\">Game Design</option><option value=\"is\">Information Systems</option>";
+		}
+        
+        try {
+        	if (studentInfo.Major__c == "Communication Design") {
+       			document.getElementById("changeConcentration").innerHTML = "<option value=\"cd\">none (Communication Design)</option>";
+        	}
+        
+        	if (studentInfo.Major__c == "Computer Science") {
+            	document.getElementById("changeConcentration").innerHTML = "<option value=\"se\">Software Engineering</option><option value=\"ns\">Network and Security</option><option value=\"gd\">Game Design</option><option value=\"is\">Information Systems</option>";
+			}
+        } catch (err) {
+            console.log("modifyInfoDiv() try/catch - Major__C not yet defined");
+        }
+    }
+    
+    function returnConcentration() {
+        return studentInfo.Major__c;
+    }
+    
+    </script>
+    <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+
+<div id="agreementDiv">
+    <img src="http://csumb.startupweekend.org/files/2013/01/2clr_CSIT-OtterLogo1-300x235.jpg"/><br/>
+1.  I understand that this software is provided on an ‘as is’ basis to make my pathway planning process more efficient.<br/>
+2.  I understand that I am responsible for planning my courses to ensure an on-time graduation.<br/>
+3.  I understand that I am responsible for carefully reading and following the instructions document in order for the software to function as expected.<br/>
+    4.  I understand that I am responsible for verifying that the final plan is correct before submitting to my advisor for review.<br/>
+<input type="button" style="text-align:right;" value="I read the above and agree!" onclick="$('#majorDiv').fadeIn();$('#agreementDiv').fadeOut();"/>
+        </div>
+
+    <div id="majorDiv">
+    Select your major:<br/>
+    <select name="majorSelection" id="majorSelectInfo">
+    	<option value="Computer Science">Computer Science</option>
+        <option value="Communication Design">Communication Design</option>
+    </select>
+    <input type="button" style="text-align:right;" value="Continue" onclick="modifyInfoDiv();$('#infoDiv').fadeIn();$('#majorDiv').fadeOut();"/>
+    </div>
+    
+    <div id="infoDiv">
+    First Name:<br/><input type="text" name="name" id="nameTextfield" placeholder="First Name"/><br/>
+<br/>
+		Last Name:<br/><input type="text" name="lastName" id="lastNameTextfield" placeholder="Last Name"/><br/>
+		<br/>
+    Student ID Number:<br/><input type="text" name="studentId" id="studentIdTextfield" placeholder="ID Number"/><br/>
+<br/>
+    
+    Your Concentration:<br/> <select id="concentrationDropdown">
+ 	<option value="se">Software Engineering</option>
+    <option value="ns">Network and Security</option>
+    <option value="gd">Game Design</option>
+    <option value="is">Information Systems</option>
+	
+    </select> 
+  <br/>
+<br/>
+    Enter the high school you graduated from:<br/><input type="text" name="highschool" id="highschoolTextfield" placeholder="High School"/><br/>
+<br/>
+If you are a transfer student, enter the college you are transferring from:<br/><input type="text" name="priorCollege" id="priorCollegeTextfield" placeholder="Transfer College"/>
+<br/><br/>
+
+	CSUMB Information: <br/>
+    <form action="">
+    <select name="startYear" id="startYearInfo">
+        <option value="0">Starting Year</option>
+    </select>
+    <select name="startSemester" id="startSemesterInfo">
+        <option value='' disabled='disabled' selected='selected' style='display:none;'>Starting Semester</option>
+        <option value="0">Fall</option>
+        <option value="1">Spring</option>
+    </select>
+    <select name="year" id="yearInfo">
+        <option value="0">Standing</option>
+        <option value="12">Freshman</option>
+        <option value="6">Transfer</option>
+    </select>
+    <br/><br/>
+    
+    CSUMB Cohort Status: <br/>
+    <select name="cohortSelect" id="cohortSelectInfo">
+    	<option value="None">None</option>
+        <option value="CS++ Cohort 1">CS++ Cohort 1</option>
+    	<option value="CS++ Cohort 2">CS++ Cohort 2</option>
+    	<option value="CSIT in 3">CSIT in 3</option>
+    </select>
+    
+    <br/><br/>
+    If you have any issues creating or updating your account information please email: <br/>lchilders@csumb.edu and/or admartinez@csumb.edu
+
+    <input type="hidden" name="selectedclass" value="null" />
+</form>
+    <br/><input style="float:right;" id="nextSubmitButton" type="button" value="Next" onclick="$('#infoDiv').hide();sender=$('#nameTextfield').val().split(' ');submitInfo();$('#saveDiv').show();$('#bottomPanel').show();$('#questions').show();$('#topBar').show();$('#bottom').show();$('#nameandstatus').show();$('#emails').show();$('#ppt').show();"/>
+     
+    </div>
+    
+    <div id="printerFriendly" hidden="true">
+   	<input type="button" value="Back" onclick="resetInfoStatus();$('#printerFriendly').hide();$('#topBar').show();$('#saveDiv').show();$('#available').show();$('#notifcations').show();$('#bottomPanel').show();$('#emails').show();$('#ppt').show();"/>
+    <input type="button" value="Print" onclick="window.print();"/>
+    <br />
+    
+    </div>
+    <div id="topBar">
+        <div id="saveDiv">
+    
+        <input type="button" id="saveILP" value="Save ILP" onclick="saveILP()"/>
+        <input type="button" id="submitILP" value="Submit for Approval" onclick="submitILP()" />
+    <input type="button" id="clearPathway" value="Clear Pathway" onclick="clearPathway()"/>   
+    <input type="button" value="Verify" onclick="verifyClasses();"/>
+    <input type="button" value="Reset To Default" onclick="confirmConcentrate()" />
+    <input type="button" value="Edit Profile" onclick="changeData();$('#topBar').hide();$('#saveDiv').hide();$('#bottom').hide();$('#bottomPanel').hide();$('#questions').hide();$('#infoDiv').show();$('#nameandstatus').hide();$('#emails').hide();$('#ppt').hide();"/>
+    <input type="button" value="Printer Friendly" onclick="addInfoToStatus();$('#topBar').hide();$('#saveDiv').hide();$('#available').hide();$('#notifcations').hide();$('#bottomPanel').hide();$('#emails').hide();$('#ppt').hide();$('#printerFriendly').show();"/>
+    <br/>
+    <br/>
+    <form action="">
+    <select name="startYear" id="startYear" onchange="changeSetup(this)">
+        <option value='' disabled='disabled' selected='selected' style='display:none;'>Starting Year</option>
+    </select>
+    <select name="startSemester" id="startSemester" onchange="changeSetup(this)">
+        <option value='' disabled='disabled' selected='selected' style='display:none;'>Choose Start Semester</option>
+        <option value="0">Fall</option>
+        <option value="1">Spring</option>
+    </select>
+    <select name="year" id="year" onchange="changeSetup(this);">
+        <option value='' disabled='disabled' selected='selected' style='display:none;'>Standing</option>
+        <option value="12">Freshman</option>
+        <option value="6">Transfer</option>
+    </select> 
+    <select name="concentration" id="changeConcentration" onchange="changeConcentrations(this);">
+        <option disabled='disabled' selected='selected' style='display:none;'>Concentration</option>
+    <option value="ns">Network and Security</option>
+    <option value="se">Software Engineering</option>
+    <option value="is">Information Systems</option>
+    <option value="gs">Game Development</option>
+    </select>
+    <br/>
+    <br/>
+    <input type="button" style="margin-top:50px;margin-right:25px;border-style:solid;border-width:2px;border-color:#000000;font-weight:bold;display:inline;background-color:rgba(255, 255, 255, 1);" value="All Classes" onclick="showAllClasses()"/>
+    <input type="button" style="margin-right:2px;border-style:solid;border-width:2px;border-color:#000000;font-weight:bold;display:inline;background-color:rgba(158, 232, 250, 1);" value="General Education Classes" onclick="showGEClasses()"/>
+    <input type="button" style="margin-right:2px;border-style:solid;border-width:2px;border-color:#000000;font-weight:bold;display:inline;background-color:rgba(204, 221, 136, 1);" value="Concentration Classes" onclick="showConClasses()"/>
+    <input type="button" style="margin-right:2px;border-style:solid;border-width:2px;border-color:#000000;font-weight:bold;display:inline;background-color:rgba(255, 255, 255, 1);" value="Elective Classes" onclick="showElecClasses()"/>
+   	<br/>
+    
+    <input type="hidden" name="selectedclass" value="null" />
+</form>
+    </div>
+    <div id="adminTools" style="margin-right:-16px;margin-left:700px;margin-top:-17px;">
+    </div>
+    </div>
+ <div id="nameandstatus" style="margin-top:50px;">
+ </div>
+ <div id="bottom">
+    <div id="available"></div>
+        <div id="notifcations">
+        <div id="selected">
+</div>
+<div id="warning">
+</div>
+    <div id="fulfilledOutcomes">
+    
+    </div><br/>
+<div id="notFulfilledOutcomes">
+    
+</div>
+    </div>
+
+    <br/>
+
+<div id="semesterT">
+    <div class="semesterLabel" id="semesterCountT">
+    <h1>Transfer Classes</h1> <br /> 
+    <h2 class="unitLabel" id="unitCountT" style="color: black;"> 0 units <br /></h2>
+    </div>
+    <ul class="semesterPicked" style="overflow:auto;height:450px;" onclick="semesterClicked(this)"> 
+    </ul>
+</div>
+<div id="main">
+    </div>
+</div>
+<div id="bottomPanel">
+<div id="chatBox">
+    <h1>Adviser Chat</h1>
+<div id="messages"></div><br/>
+<textarea rows="3" id="messages" placeholder="Enter your message here"></textarea><button type="button" id="sendMessage">Send</button> 
+</div>    
+ <div id="questions"> 
+    <h1>Help Tips</h1>
+        <div id="questionText">
+    <a>You must have 9 upper divison units in your general education.</a><br/>
+    <a>You must fulfill the 201 language requirement.</a><br/>
+    <a href="https://www.csumb.edu/planning/schedule" target="_blank">Course Catalog</a>
+        </div>
+        <div id="questionResponse">
+        </div>
+        <br/>
+    <!-- <button onclick="prevQuestion()">Back</button> <button onclick="skipQuestion()">Next</button> -->
+</div>
+<div id="noteBox">
+    <h1>Notes</h1>
+    <textarea rows="5" id="note"></textarea><br/><button type="button" id="setNotes">Save</button> 
+</div>
+</div>
+<div id="emails">
+    <br/><br/>
+Problems or questions? Email the developers at lchilders@csumb.edu and/or admartinez@csumb.edu
+</div>
+<div id="ppt">
+<a href="http://goo.gl/c223v3">Walkthrough Powerpoint</a>
+</div>
+
+<div id="loadingDiv">
+    <img src='https://media.giphy.com/media/JBeu9q9LC1Kve/giphy.gif' class='absoluteCenter' />
+</div>
+
+
+<script>
+    
+    function addInfoToStatus() {
+        if (typeof adminInfo == 'undefined') {
+        	$('#nameandstatus').html("<font color=\"black\">ILP Status: " + submisisonAbbrToName(studentInfo.SubmissionState__c) + "<br/><br/>Student: " + studentInfo.Name__c + " " + studentInfo.Last_Name__c + "<br/>Student ID: " + studentInfo.Student_ID_n__c + "<br/>Concentration: " + pathwayAbbrToPrint(studentInfo.Concentration__c) + "<br/>High School: " + studentInfo.Highschool__c + "<br/>CSUMB Starting: " + semesterToFull(studentInfo.Starting_Semester__c) + " " + studentInfo.Start_Year__c + " as a " + incomingStatusToFull(studentInfo.Incoming_Status__c) + "<br/>Cohort Status: " + studentInfo.Cohort__c + "<br/>Student Major: " + studentInfo.Major__c + "<br/><br/><br/><br/>Adivsor Signature:________________________________________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Advisor Name:________________________________________________<br/><br/><br/><br/>Student Signature:________________________________________________________________</font>");
+        }
+        else if (typeof adminInfo != 'undefined') {
+        	$('#nameandstatus').html("<font color=\"black\">ILP Status: " + submisisonAbbrToName(studentInfo.SubmissionState__c) + "<br/><br/>Student: " + studentInfo.Name__c + " " + studentInfo.Last_Name__c + "<br/>Student ID: " + studentInfo.Student_ID_n__c + "<br/>Concentration: " + pathwayAbbrToPrint(studentInfo.Concentration__c) + "<br/>High School: " + studentInfo.Highschool__c + "<br/>CSUMB Starting: " + semesterToFull(studentInfo.Starting_Semester__c) + " " + studentInfo.Start_Year__c + " as a " + incomingStatusToFull(studentInfo.Incoming_Status__c) + "<br/>Cohort Status: " + studentInfo.Cohort__c + "<br/>Student Major: " + studentInfo.Major__c + "<br/><br/><br/><br/>Advisor Signature:________________________________________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Advisor Name: " + adminInfo.Name__c + "<br/><br/><br/><br/>Student Signature:________________________________________________________________</font>");
+        }
+    
+    	$("body").css("background-color", "#FFF");
+        $("html").css("background-color", "#FFF");
+    	$(".odd").css("background-color", "#FFF");
+        $(".even").css("background-color", "#FFF");
+    }
+        
+    function resetInfoStatus() {
+        
+        if (userIsAdmin) {
+        	$("body").css("background-color", "#123");
+        	$("html").css("background-color", "#123");
+        	$(".odd").css("background-color", "#CD8");
+       	 	$(".even").css("background-color", "#9ee8fa");
+            
+            $("#nameandstatus").html("<b>Viewing: </b>" + studentInfo.Name__c + " " + studentInfo.Last_Name__c + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Concentration: </b>" + pathwayAbbrToPrint(studentInfo.Concentration__c)  + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Status: </b>" + submisisonAbbrToName(studentInfo.SubmissionState__c) + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Major: </b>" + studentInfo.Major__c);
+        }
+        
+        else {
+            $("body").css("background-color", "#123");
+        	$("html").css("background-color", "#123");
+        	$(".odd").css("background-color", "#CD8");
+       	 	$(".even").css("background-color", "#9ee8fa");
+            
+			$("#nameandstatus").html("<b>Student Name: </b>" + studentInfo.Name__c + " " + studentInfo.Last_Name__c + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Your ILP Status: </b>" + submisisonAbbrToName(studentInfo.SubmissionState__c));
+        }
+    }
+                       
+    function showGEClasses() {
+    	var coursesAvailable = {!courseslistAvailable};
+        document.getElementById("available").innerHTML="";
+        clearNotifications();
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'General Education') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesGE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+    }
+    
+    function showConClasses() {
+    	var coursesAvailable = {!courseslistAvailable};
+        document.getElementById("available").innerHTML="";
+        clearNotifications();
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (returnConcentration() == "Computer Science") {
+    			if (coursesAvailable[index].Class_Type__c == 'Concentration (CS)') {
+	   				$("#available").first().append(
+            		$("<div id='" + coursesAvailable[index].Name + "' class='classesC' onclick='classesAvailable(this)'> " + coursesAvailable[index].Name + "</div>") 
+	   				);
+    			}
+			}
+            
+			if (returnConcentration() == "Communication Design") {
+    			if (coursesAvailable[index].Class_Type__c == 'Concentration (CD)') {
+	   				$("#available").first().append(
+            		$("<div id='" + coursesAvailable[index].Name + "' class='classesC' onclick='classesAvailable(this)'> " + coursesAvailable[index].Name + "</div>") 
+	   				);
+    			}
+			}
+        }
+    }
+    
+    function showElecClasses() {
+    	var coursesAvailable = {!courseslistAvailable};
+        document.getElementById("available").innerHTML="";
+        clearNotifications();
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'Elective') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+    }
+    
+    function showAllClasses() {
+    	var coursesAvailable = {!courseslistAvailable};
+        document.getElementById("available").innerHTML="";
+        clearNotifications();
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'General Education') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesGE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (returnConcentration() == "Computer Science") {
+    			if (coursesAvailable[index].Class_Type__c == 'Concentration (CS)') {
+	   				$("#available").first().append(
+            		$("<div id='" + coursesAvailable[index].Name + "' class='classesC' onclick='classesAvailable(this)'> " + coursesAvailable[index].Name + "</div>") 
+	   				);
+    			}
+			}
+            
+			if (returnConcentration() == "Communication Design") {
+    			if (coursesAvailable[index].Class_Type__c == 'Concentration (CD)') {
+	   				$("#available").first().append(
+            		$("<div id='" + coursesAvailable[index].Name + "' class='classesC' onclick='classesAvailable(this)'> " + coursesAvailable[index].Name + "</div>") 
+	   				);
+    			}
+			}
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'Elective') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c != 'Concentration (CS)' && coursesAvailable[index].Class_Type__c != 'Concentration (CD)' && coursesAvailable[index].Class_Type__c != 'General Education' && coursesAvailable[index].Class_Type__c != 'Elective') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classes' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+    }
+                           
+    function getStartingStatus() {
+        return studentInfo ? 
+                (studentInfo.Incoming_Status__c == 12 ? 
+                    "Freshman" : 
+                    "Transfer") :
+                null;
+    }
+    function getQuestionTypeLength(type) {
+        var c = 0;
+        for(i = 0; i < questions.length; ++i) {
+            //console.log(questions[i].Name + " ?? " + type);
+            if(questions[i].Name.indexOf(type) != -1) {
+                c++;
+            }
+        }
+        return c;
+    }
+    function getQuestion(type, number) {
+        console.log(type + "-" + number);
+        type = type.toLowerCase();
+        for(i = 0; i < questions.length; ++i) {
+            if(questions[i].Name.toLowerCase() == type + "-" + number) {
+                return questions[i];
+            }
+        }
+    }
+    function yesQuestion() {
+         $("#questionResponse").show();
+         $("#questionResponse").text(questions[questionCount].Yes__c);
+    }
+    function noQuestion() {
+        $("#questionResponse").show();
+        $("#questionResponse").text(questions[questionCount].No__c);
+    }
+    function skipQuestion() {
+        $("#questionResponse").hide();
+        questionCount += 1;
+        var startingStatus = getStartingStatus();
+        console.log(startingStatus);
+        if(questionCount >= getQuestionTypeLength(startingStatus)) {
+            questionCount = 0;
+        }
+        var q = getQuestion(startingStatus, questionCount+1);
+        $("#questionText").text(q.QuestionText__c);
+    }
+    function prevQuestion() {
+        $("#questionResponse").hide();
+        questionCount -= 1;
+        if(questionCount < 0) {
+            questionCount = getQuestionTypeLength(getStartingStatus()) - 1;
+        }
+        var q = getQuestion(getStartingStatus(), questionCount+1);
+        $("#questionText").text(q.QuestionText__c);
+    }
+    function calcSemesterUnits () {
+        $(".unitLabel").css('color','black');
+         var totalCount = 0;
+         
+         for (index1 = 0; index1 < parseInt($("#year").val()); index1++) {
+             var semesterCount = 0;
+             var spot ='unitCount'+index1;
+             
+             var idArray = $("div#semester"+index1+" > ul li").map(function(){
+                 var linkedCourse = this.id.substr(0, this.id.length - 6);
+                 semesterCount = semesterCount + getCourseUnits(linkedCourse);
+                 totalCount += getCourseUnits(linkedCourse);
+                 document.getElementById(spot).innerHTML=' ' + semesterCount + ' units <br/>';
+                 if (semesterCount > 18) {
+                     $("#unitCount"+index1).css('color','red');
+                     //$("#warning").append("Warning: Unit count limit per semester is 18 units.");
+                 }  
+             }).get();  
+             
+             document.getElementById(spot).innerHTML=' '+ semesterCount + ' units <br/>';      
+        } 
+        var semesterCount = 0;
+        var idArray = $("div#semesterT > ul li").map(function(){
+                 var linkedCourse = this.id.substr(0, this.id.length - 6);
+                 semesterCount = semesterCount + getCourseUnits(linkedCourse);
+                 totalCount += getCourseUnits(linkedCourse);
+                 document.getElementById("unitCountT").innerHTML=' ' + semesterCount + ' units <br/>';
+            }).get();       
+        document.getElementById("unitCountT").innerHTML=' '+ semesterCount + ' units <br/>'; 
+    } 
+    
+     function clearPathway() {
+        var count = parseInt( document.getElementById("year").value );
+        for (var i = 0; i < count; i++) {
+            var semester = '#semester' + i + ' > ul';
+            $(semester).empty();
+        }
+        $("#semesterT > ul").empty();
+        $('#available>div').show();
+        calcSemesterUnits();
+    }
+
+    
+    function getyeardates(startyear) {
+        var startyear = parseInt(startyear);
+        var years = [];
+        if($("#startSemester").val() == 0) 
+        { 
+            years[0]  = startyear;
+            years[1]  = startyear + 1;
+            years[2]  = startyear + 1;
+            years[3]  = startyear + 2;
+            years[4]  = startyear + 2;
+            years[5]  = startyear + 3;
+            years[6]  = startyear + 3;
+            years[7]  = startyear + 4;
+            years[8]  = startyear + 4;
+            years[9]  = startyear + 5;
+            years[10] = startyear + 5;
+            years[11] = startyear + 6;
+            years[12] = startyear + 6;
+        } else {
+            years[0]  = startyear;
+            years[1]  = startyear;
+            years[2]  = startyear + 1;
+            years[3]  = startyear + 1;
+            years[4]  = startyear + 2;
+            years[5]  = startyear + 2;
+            years[6]  = startyear + 3;
+            years[7]  = startyear + 3;
+            years[8]  = startyear + 4;
+            years[9]  = startyear + 4;
+            years[10] = startyear + 5;
+            years[11] = startyear + 5;
+            years[12] = startyear + 6;
+        }
+        return years;
+    }
+    function getSemester(n) {
+        if (n % 2 == $("#startSemester").val()) {
+            return "SP";
+        } else {
+            return "FA";
+        }
+    }
+    function confirmConcentrate() {
+        var r = confirm("Are you sure you want to change your concentration? This action will replace your current ILP pathway and save all current settings.");
+        if(r) {
+           concentrate();
+        } else {
+            
+        }
+    }
+    function concentrate() {
+         var concentration = $("#changeConcentration").val();
+            showLoading();
+            schedule.addOrUpdateUser(studentInfo.Student_ID_n__c, concentration, studentInfo.GoogleID__c,
+                                      studentInfo.Highschool__c || "", studentInfo.PriorCollege__c || "",
+                                      $("#year").val(), studentInfo.Name__c, studentInfo.Last_Name__c, studentInfo.Cohort__c, studentInfo.Major__c, $("#startSemester").val(), $("#startYear").val(), "UN",
+                function(result, event){
+                    console.log("add or update user");
+                    if(result) {
+                        studentInfo = result;
+                        var y = $("#year").val();
+                        if(y > 0) {
+                            var pathway = concentration;
+                            if(y == 6) {
+                                pathway = "trans-" + pathway;
+                                schedule.setDefaultForStudent(studentId, studentInfo.Id, studentInfo.Start_Year__c, pathway,
+                                function(result, event) {
+                                    console.log(result); console.log(event);
+                                    loadInfo(studentInfo.GoogleID__c);
+                                });
+                            } else if (y == 12) {
+                                pathway = "fys-" + pathway;
+                                schedule.setDefaultForStudent(studentId, studentInfo.Id, studentInfo.Start_Year__c, pathway,
+                                function(result, event) {
+                                    console.log(result); console.log(event);
+                                    loadInfo(studentInfo.GoogleID__c);
+                                });
+                            }
+                        }
+                    } else {
+                        alert("Error adding/updating user. Are you missing a field?");
+                    }
+                }
+             );
+    }
+    function changeConcentrations(t) {
+        var t = $(t);
+        var r = confirm("Are you sure you want to change your concentration? This action will replace your current ILP pathway and save all current settings.");
+        if(r) {
+           concentrate();
+        } else {
+            t.val(t.data("old"));
+        }
+        t.data("old", t.val());
+    }
+    function changeSetup(t) {
+        var t = $(t);
+        var r = confirm("Changing that info will clear your pathway, are you sure you want to do that?");
+        if(r) {
+            setupSemesters(); 
+        } else {
+            t.val(t.data("old"));
+        }
+        t.data("old", t.val());
+    }
+    function setupSemesters() {
+        var coursesAvailable = {!courseslistAvailable};
+        $("#semesterT > ul").html("");
+        document.getElementById("available").innerHTML="";
+        document.getElementById("main").innerHTML="";
+        clearNotifications();
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'General Education') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesGE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'Concentration (CS)') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesC' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c == 'Elective') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classesE' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        for (var index = 0; index < coursesAvailable.length; index++) {
+            if (coursesAvailable[index].Class_Type__c != 'Concentration' && coursesAvailable[index].Class_Type__c != 'General Education' && coursesAvailable[index].Class_Type__c != 'Elective') {
+            	$("#available").first().append( 
+                	$("<div id='" + coursesAvailable[index].Name + "' class='classes' onclick='classesAvailable(this)'> " 
+                	  + coursesAvailable[index].Name + "</div>") 
+            	);
+            }
+        }
+        
+        var count = parseInt( document.getElementById("year").value );
+        var yearHeaders = getyeardates(document.getElementById("startYear").value);
+        for (var i = 0; i < count; i++) {
+            var semester = document.createElement('div');
+            semester.id = 'semester' + i;
+            semester.innerHTML = '<div class= \'semesterLabel\' id =\'semesterCount'+i+'\'><h1>'+ getSemester(i+1) + ' ' + 
+                yearHeaders[i] +'</h1> </br> <h2 class= \'unitLabel\' id =\'unitCount'+i+'\'></h2></div>' + 
+                '<ul class="semesterPicked" onclick="semesterClicked(this)"> </ul>';
+            if (i%2 == 0) {
+                semester.className = 'even';
+            }
+            else 
+            {
+                semester.className = 'odd';
+            }
+            document.getElementById("main").appendChild(semester);
+        }
+        if($("#year").val() == 6) {
+            $("#semesterT").fadeIn();
+        } else {
+            $("#semesterT").hide();
+        }
+    }
+    var addedAlready = false;
+    function submitInfo() {
+        //$("#nextSubmitButton").attr("enabled",false);
+        if(addedAlready) { return; }
+        addedAlready = true;
+        showLoading();
+        schedule.addOrUpdateUser($("#studentIdTextfield").val(), $("#concentrationDropdown").val(), googleId,
+                                  $("#highschoolTextfield").val(),$("#priorCollegeTextfield").val(),
+                                  $("#yearInfo").val(), $("#nameTextfield").val(), $("#lastNameTextfield").val(), $("#cohortSelectInfo").val(), $("#majorSelectInfo").val(), $("#startSemesterInfo").val(), $("#startYearInfo").val(), "UN",
+            function(result, event){
+                console.log("add or update user");
+                if(result) {
+                    studentInfo = result;
+                    var y = $("#yearInfo").val();
+                    if(y > 0) {
+                        var pathway = pathwayNameToAbbr($("#concentrationDropdown").val());
+                        if(y == 6) {
+                            pathway = "tran-" + pathway;
+                            $("#infoDiv").hide(500, function() {
+                                $("#bottom").show();
+                                $("#topBar").show();
+                                $("#bottomPanel").show();
+                                loadInfo(googleId);
+                            });
+                        } else if (y == 12) {
+                            pathway = "fys-" + pathway;
+         //console.log(pathway);
+                            schedule.setDefaultForStudent(studentId, studentInfo.Id, studentInfo.Start_Year__c, pathway,
+                            function(result, event) {
+                                $("#infoDiv").hide(500, function() {
+                                        $("#bottom").show();
+                                        $("#topBar").show();
+                                        $("#bottomPanel").show();
+                                        loadInfo(googleId);
+                                    });
+                            });
+                        }
+                    }
+                    sendMail(3);
+                } else {
+                    alert("Error adding user for some reason, this should never happen");
+                }
+                hideLoading();
+            }
+         );
+    }
+         
+    var saving = false;
+    function saveILP(confirmationFunction) {
+        console.log(studentId);
+        if(saving) { return; }
+        saving = true;
+        showLoading();
+        schedule.removeAllEnrollmentForStudent(studentInfo.Student_ID_n__c,
+            function(result, event) {
+                schedule.addOrUpdateUser(studentInfo.Student_ID_n__c, $("#changeConcentration").val(),
+                                         studentInfo.GoogleID__c, studentInfo.Highschool__c || "", studentInfo.PriorCollege__c || "",
+                                         $("#year").val(), studentInfo.Name__c || "", studentInfo.Last_Name__c || "", studentInfo.Cohort__c || "", studentInfo.Major__c || "", $("#startSemester").val(), $("#startYear").val(), "UN",
+                    function(result, event) {
+                        for(var i = 0; i < $("#year").val(); ++i)
+                        {
+                            var header   = $("#semester"+i+" div h1").text();
+                            var year     = header.substring(3);
+                            var semester = header.substring(0,2);
+                            $("#semester" + i + " ul li").each(function(){
+                                var name = $(this).text();
+                                name     = name.substring(0, name.indexOf(" ")).trim();
+         console.log("Class:" + name);
+         console.log("Year:"  + year);
+         console.log("Semester:" + semester);
+         //console.log("------------------------");
+                                schedule.addEnrollment(studentId, name, parseInt(year), semester,
+                                    function(result, event) {
+         //console.log(event);
+         //console.log(name + ": " + result);
+                                    }
+                                );
+                            });
+                        }
+                        if($("#year").val() == 6) {
+                            var t = $("#semesterT");
+                            var header = $("#semesterT div h1").text();
+                             $("#semesterT ul li").each(function(){
+                                var name = $(this).text();
+                                name     = name.substring(0, name.indexOf(" ")).trim();
+                                schedule.addEnrollment(studentId, name, 0, "T",
+                                    function(result, event) {
+                                    }
+                                );
+                             });
+                        }
+                        saving = false;
+                        hideLoading();
+                        if(confirmationFunction) {
+                            confirmationFunction();
+                        } else {
+                            sendMail(1);
+                            alert("Successfully saved ILP");
+                        }
+                    }
+                );
+            }
+        );
+        
+    }
+    
+    var submitting = false;
+    function submitILP() {
+        if(submitting) { return; }
+        submitting = true;
+        if(adminInfo!=null){
+            console.log("admin approve");
+            schedule.changeSubmissionState(studentInfo.Student_ID_n__c, "APR",
+            function(result, event) {
+                submitting = false;
+                if(result) {
+                    alert("ILP Successfully Approved");
+                }
+            });
+        } else {
+            var c = function() {
+                schedule.changeSubmissionState(studentInfo.Student_ID_n__c, "SUB",
+                function(result, event) {
+                    submitting = false;
+                    if(result) {
+                        sendMail(2)
+                        alert("ILP Successfully Submitted");
+                    }
+                });
+            }
+            saveILP(c);
+        }
+}
+    
+    function checkAndLoadAdmin() {
+        schedule.getAdmin(googleId, 
+            function(result, event) {
+                //result
+                if(result) {
+                    userIsAdmin = true;
+                    //Is Admin
+                    adminInfo = result;
+                    //Load Admin Stuff
+                    sender = adminInfo.Name__c.split(" "); 
+         //console.log(adminInfo);
+                    $("#bottom").show();
+                    $("#topBar").show();
+                    $("#noteBox *").show();
+                    var tools = $("#adminTools");
+                    $('#saveDiv').prepend('<input id="saveAdminILP" onclick="saveILP()" type="button" value="Save ILP">')
+                    tools.show();
+                    tools.append($(
+                        "<select id='adminPWS'><option id='pwsTopOption' value='' disabled='disabled' selected='selected' style='display:none;float:left;'>Default Pathways</option></select>"+
+                        "<br/><hr><select id='adminUN'><option id='unsubTopOption' value='' disabled='disabled' selected='selected' style='display:none;float:left;'>Unsubmitted ILPs</option></select><input type='text' id='adminFilterUN' style='float:right;' placeholder='Unsubmitted Filter' /></br>" +
+                        "<hr><select id='adminSUB'><option id='subTopOption' value='' disabled='disabled' selected='selected' style='display:none;float:left;'>Submitted ILPs</option></select><input type='text' id='adminFilterSUB' style='float:right;' placeholder='Submitted Filter' /> <br/>" +
+                        "<hr><select id='adminAPR'><option id='aprTopOption' value='' disabled='disabled' selected='selected' style='display:none;float:left;'>Approved ILPs</option></select><input type='text' id='adminFilterAPR' style='float:right;' placeholder='Approved Filter' /> <br/>"
+                  ));
+                    
+                    $("#saveILP").val("Needs Work");
+                    $("#submitILP").val("Approved");
+                    var changeILPFromChange = function() {
+                        var id = $(this).attr("id");
+                        if(id.indexOf("APR") != -1) {
+                            $("#adminSUB").val(null);
+                            $("#adminUN").val(null);
+                            $("#adminPWS").val(null);
+                        } else if (id.indexOf("SUB") != -1) {
+                            $("#adminUN").val(null);
+                            $("#adminAPR").val(null);
+                            $("#adminPWS").val(null);
+                        } else if (id.indexOf("UN") != -1) {
+                            $("#adminSUB").val(null);
+                            $("#adminAPR").val(null);
+                            $("#adminPWS").val(null);
+                        } else if (id.indexOf("PWS") != -1) {
+                            $("#adminSUB").val(null);
+                            $("#adminAPR").val(null);
+                            $("#adminUN").val(null);
+                        }
+                        clearNotifications();
+                        studentId = $(this).val();
+                        
+                        schedule.getUser(studentId, function(result, event) {
+         //console.log(result[0].GoogleID__c);
+                            loadInfo(result[0].GoogleID__c);
+                            //console.log(result[0]);
+                            var status = submisisonAbbrToName(result[0].SubmissionState__c);
+                            $("#nameandstatus").html("<b>Viewing: </b>" + result[0].Name__c + " " + result[0].Last_Name__c + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Concentration: </b>" + pathwayAbbrToPrint(result[0].Concentration__c)  + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Status: </b>" + status + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Major: </b>" + result[0].Major__c);
+                            $("#unsubTopOption").select();
+                            $("#subTopOption").select();
+                            $("#aprTopOption").select();
+                            //console.log("about to get comments for " + result[0].GoogleID__c);
+                            schedule.getComments(result[0].GoogleID__c, 
+                                function(result, event) {
+                                    //console.log(result);
+                                    $("#note").val(result || "");
+                                }
+                            );
+                        });
+                    }
+         
+
+                    $("#adminUN").on("change" , changeILPFromChange);
+                    $("#adminSUB").on("change", changeILPFromChange);
+                    $("#adminAPR").on("change", changeILPFromChange);
+                    $("#adminPWS").on("change", changeILPFromChange);
+                    $("#adminFilterUN").on("keydown", function() {
+                            schedule.getUsersFromNameUN($(this).val(),
+                                function(result, event) {
+                                    $("#adminUN").empty();
+                                    $("#adminUN").append("<option id='unsubTopOption' value='' disabled='disabled' selected='selected' style='display:none;'>Unsubmitted ILPs</option>");
+                                    if(result.length > 0) {
+                                        for(var student in result) {
+                                            if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                            $("#adminUN").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                                        }
+                                    } else {
+                                        $("#adminUN").css("width","100px");
+                                    }
+                                }
+                            );
+                    });
+                    $("#adminFilterSUB").on("keydown", function() {
+                            schedule.getUsersFromNameSUB($(this).val(),
+                                function(result, event) {
+                                    $("#adminSUB").empty();
+                                    $("#adminSUB").append("<option id='subTopOption' value='' disabled='disabled' selected='selected' style='display:none;'>Submitted ILPs</option>");
+                                    if(result.length > 0) {
+                                        for(var student in result) {
+                                            if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                            console.log(student);
+                                            $("#adminSUB").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                                        }
+                                    } else {
+                                        $("#adminSUB").css("width","100px");
+                                    }
+                                }
+                            );
+                    });
+                    $("#adminFilterAPR").on("keydown", function() {
+                            schedule.getUsersFromNameAPR($(this).val(),
+                                function(result, event) {
+                                    $("#adminAPR").empty();
+                                    $("#adminAPR").append("<option id='aprTopOption' value='' disabled='disabled' selected='selected' style='display:none;'>Approved ILPs</option>");
+                                    if(result.length > 0) {
+                                        for(var student in result) {
+                                            if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                            $("#adminAPR").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                                        }
+                                    } else {
+                                        $("#adminAPR").css("width","100px");
+                                    }
+                                }
+                            );
+                    });
+                    schedule.getSubmittedILPs(function(result, event) {
+                        if(result.length > 0) {
+                            for(var student in result) {
+                                if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                $("#adminSUB").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                            }
+                        } else {
+                            $("#subTopOption").text("No Submitted ILPs Found");
+                        }
+                    });
+                    schedule.getUnSubmittedILPs(function(result, event) {
+                        if(result.length > 0) {
+                            for(var student in result) {
+                                if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                $("#adminUN").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                            }
+                        } else {
+                            $("#unsubTopOption").text("No Unsubmitted ILPs Found");
+                        }
+                    });
+                    schedule.getApprovedILPs(function(result, event) {
+                        if(result.length > 0) {
+                            for(var student in result) {
+                                if(!result[student].Student_ID_n__c || result[student].Name__c == "pathway") { continue; }
+                                $("#adminAPR").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Name__c + " " + result[student].Last_Name__c + "</option>");
+                            }
+                        } else {
+                            $("#aprTopOption").text("No Approved ILPs Found");
+                        }
+                    });
+                    schedule.getPathways(function(result, event) {
+                        console.log(result);
+                        if(result) {
+                            for(var student in result) {
+                                if(!result[student].Student_ID_n__c) { continue; }
+                                $("#adminPWS").append("<option value='" + result[student].Student_ID_n__c + "'>" + result[student].Student_ID_n__c + "</option>");
+                            }
+                        }
+                    });
+                } else {
+                    loadInfo(googleId);
+                }
+            }
+     );
+    }
+    function loadInfo(gid) {
+         //console.log(gid);
+         schedule.getUserFromGoogleID(gid,
+             function(result, event) {
+                if(result.length > 0) {
+         //console.log(result);
+                    sender = result[0].Name__c + " " + result[0].Last_Name__c; 
+                    result = result[0];
+
+					var newResult = result
+         //console.log(result.Incoming_Status__c); 
+         //console.log(result.Start_Year__c); 
+         //console.log(result.Starting_Semester__c); 
+                    
+                    var state = result.Concentration__c.toLowerCase();
+                    console.log(state);
+                    
+                    $("#year").val(result.Incoming_Status__c);
+                    $("#startYear").val(result.Start_Year__c);
+                    $("#startSemester").val(result.Starting_Semester__c);
+                    $("#changeConcentration").val(state);
+                    $("#year").data("old", result.Incoming_Status__c);
+                    $("#startYear").data("old", result.Start_Year__c);
+                    $("#startSemester").data("old", result.Starting_Semester__c);
+                    $("#changeConcentration").data("old", state);
+                    console.log(result);
+                    
+                    schedule.getOutcomes(result.Concentration__c,
+                        function(result, event) {
+                            if(result) {
+                                console.log(result);
+                                coursesOutcomes = result;
+                            }
+                        }
+                    );
+                    
+                    if(!adminInfo) {
+                        $("#nameandstatus").html("<b>Student Name: </b>" + result.Name__c + " " + result.Last_Name__c + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Your ILP Status: </b>" + submisisonAbbrToName(result.SubmissionState__c));
+                    }
+                    studentInfo = result;
+                    studentId = studentInfo.Student_ID_n__c;
+         
+                    getChatBox();
+                    getMajorElectives();
+                    loadILP();
+                } else {
+                    $("#agreementDiv").show();
+                }
+             }
+         );
+    }
+    function loadILP() {
+         //$("#questions").fadeIn();
+        modifyInfoDiv();
+        
+        setupSemesters();
+        showLoading();
+        schedule.getILP(studentId, 
+            function(result, event){
+                if (event.status) {
+                    var startYear = $("#startYear").val();
+                    var startSemester = $("#startSemester").val();
+                    for(var i = 0; i < result.length; ++i)
+                    {
+                        if( result[i].Semester_Enrolled__c == "T") {
+                            selectClass($("#semesterT ul"), result[i].Class__r.Name);
+                        } else {
+                            var sem = result[i].Semester_Enrolled__c == "FA" ? 0 : 1;
+                            var diff = result[i].Year_Enrolled__c - startYear;
+                            diff *= 2;
+                            if(startSemester == sem) {
+                                if(sem == 1) {
+                                } else {
+                                }
+                            } else {
+                                if(sem == 1) {
+                                    diff--;
+                                } else {
+                                    diff++;
+                                }
+                            }
+                            var totalAdd = diff;
+                            selectClass($("#semester"+totalAdd+" ul"), result[i].Class__r.Name);
+                        }
+                    }
+                    calcSemesterUnits();
+                    hideLoading();
+                } else if (event.type === 'exception') {
+                    console.log("Exception: " + event);
+                } else {
+                    console.log(event);
+                }
+                $("#bottom").fadeIn();
+                $("#bottomPanel").fadeIn();
+                $("#topBar").fadeIn();
+            }
+        );
+    }
+    
+    function getChatBox() {
+        console.log(studentInfo.GoogleID__c);
+        schedule.getChatBox(studentInfo.GoogleID__c,
+            function(result, event) {
+                $("#messages").html(result || "");
+            }, 
+            {escape: false}
+        );
+    }
+    
+    function saveAsPDF() {
+        var doc = new jsPDF();
+        var source = $('#main').first().html();
+        var specialElementHandlers = {
+            '#bypassme': function(element, renderer) {
+                return true;
+            }
+        };
+
+        doc.fromHTML(
+            source, // HTML string or DOM elem ref.
+            0.5,    // x coord
+            0.5,    // y coord
+            {
+                'width': 1000, // max width of content on PDF
+                'elementHandlers': specialElementHandlers
+            }
+        );
+        
+        doc.save("test.pdf");
+    }
+    
+    function getMajorElectives() {
+        if(!studentInfo) { return; }
+        schedule.getMajorElectives(studentInfo.Concentration__c,
+            function(result, event) {
+                if(!result) { 
+                    $("#warning").show();
+                    $("#warning").append("Problem getting Major Electives, make sure you have selected your concentration.");
+                    return; 
+                }
+                majorElectives = result;
+            }
+        );
+    }
+    
+    function areYouSure(text, func, noFunc) {
+        var r = confirm(text);
+        if(r) { func(); } else { noFunc() };
+    }
+    function clearNotifications() {
+        $("#fulfilledOutcomes").html("");
+        $("#notFulfilledOutcomes").html("");
+        $("#warning").html("");
+        $("#warning").hide();
+    }
+    
+    function semesterNumber(sem) {
+        if(sem == "T") {
+            return -1;
+        }
+        return sem;
+    }
+    
+    function showLoading() {
+        $("#loadingDiv").show();
+    }
+    function hideLoading() {
+        $("#loadingDiv").hide();
+    }
+    
+    function submisisonAbbrToName(abbr) {
+        return abbr == "UN" ? "Unsubmitted" : (abbr == "SUB" ? "Submitted" : (abbr == "APR" ? "Approved" : "Not Sure!"));
+    }
+    function pathwayNameToAbbr(name) {
+        return name == "SOFTWARE" ? "se" : ( name == "NETWORK" ? "ns" : (name == "GAME" ? "gd" : ( name == "INFORMATION" ? "is" : "Not Sure!" ) ) );
+    }
+    function pathwayAbbrToName(abbr) {
+        abbr = abbr.toLowerCase();
+        return abbr == "se" ? "SOFTWARE" : ( abbr == "ns" ? "NETWORK" : (abbr == "gd" ? "GAME" : ( abbr == "is" ? "INFORMATION" : "Not Sure!" ) ) )
+    }
+    function pathwayAbbrToPrint(abbr) {
+        abbr = abbr.toLowerCase();
+        return abbr == "se" ? "Software Engineering" : ( abbr == "ns" ? "Network and Security" : (abbr == "gd" ? "Game Design" : ( abbr == "is" ? "Information System" : "Not Sure!" ) ) )
+    }
+    function semesterToFull(abbr) {
+        return abbr == "0" ? "Fall" : "Spring";
+    }
+    function incomingStatusToFull(abbr) {
+        return abbr == "12" ? "Freshman" : "Transfer";
+    }
+    
+    function removeAt(arr, index) {
+        if(index > -1) {
+            arr.splice(index,1);
+        }
+    }
+</script>    
+</apex:page>

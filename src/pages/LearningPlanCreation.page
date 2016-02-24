@@ -1,0 +1,45 @@
+<apex:page standardController="Cohort__c" extensions="LearningPlanCreationController">
+
+	<apex:form >
+		<apex:pageMessages id="pagemsg"/>
+
+		<apex:pageBlock title="Create Learning Plan">
+			<apex:pageBlockButtons location="top">
+			    <apex:actionStatus id="SaveButtonStatus">
+			     	<apex:facet name="stop">
+			      		<apex:outputPanel >
+			        		<apex:commandButton action="{!createLearningPlan}" value="Create" status="SaveButtonStatus" rerender="pagemsg" />
+			       			<apex:commandButton action="{!cancel}" value="Back" immediate="true" />
+			       		</apex:outputPanel>
+			      	</apex:facet>
+			    	<apex:facet name="start">
+			   			<apex:outputPanel >
+			        		<apex:commandButton value="Creating..." disabled="true" />
+			        		<apex:commandButton value="Creating..." disabled="true" />
+			       		</apex:outputPanel>
+			      	</apex:facet>
+			    </apex:actionStatus>
+   			</apex:pageBlockButtons>
+			
+			<apex:pageBlockSection showHeader="false" columns="2" id="block1">
+			
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Starting Semester" for="semester" />
+					<apex:inputField value="{!cohort.Starting_Semester__c}" id="semester"/>
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Starting Year" for="year" />
+					<apex:inputField value="{!cohort.Starting_Year__c}" id="year"/>
+				</apex:pageBlockSectionItem>			
+
+				<apex:pageBlockSectionItem >
+					<apex:outputLabel value="Learning Plan Template" for="template" />
+					<apex:inputField value="{!cohort.Cohort_Learning_Plan_Template__c}" id="template"/>
+				</apex:pageBlockSectionItem>			
+
+			</apex:pageBlockSection>
+		</apex:pageBlock>
+	</apex:form>	
+
+</apex:page>
